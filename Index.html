@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>html{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: ferramenta de bancada — resumo no topo, filtros, lista de cabos com etiqueta de código colorida; detalhes em painel. */
+:root{
+  --bg:#F2F3F1; --surface:#FFFFFF; --sunken:#E7E9E6; --line:#D5D8D3;
+  --fg:#1D2226; --muted:#5E676D; --ink:#27333D; --ink-fg:#FFFFFF;
+  --focus:#2F6FB0;
+  --ok:#2E7D4F; --ok-bg:#E3F1E8; --warn:#9A6400; --warn-bg:#FBEFD6; --bad:#B3261E; --bad-bg:#F8E1DF; --out:#4B5FA8; --out-bg:#E4E8F6; --off:#6D6D6D; --off-bg:#E9E9E9;
+  --len-g:#2E9E57; --len-b:#2F6FB0; --len-y:#E0B000; --len-r:#D2372B;
+  --tag-bg:#FAFAF7; --tag-fg:#1D2226;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15191C; --surface:#1E2327; --sunken:#262C31; --line:#343B41;
+  --fg:#E8EBEC; --muted:#9AA4AA; --ink:#DDE4EA; --ink-fg:#15191C; --focus:#7FB2E8;
+  --ok:#7ACB98; --ok-bg:#1F3328; --warn:#E8B75A; --warn-bg:#3A2E16; --bad:#F08A80; --bad-bg:#3D2020; --out:#A8B6EE; --out-bg:#262D47; --off:#A5A5A5; --off-bg:#2C2C2C;
+  --tag-bg:#EDEDE6; --tag-fg:#15191C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#15191C; --surface:#1E2327; --sunken:#262C31; --line:#343B41;
+  --fg:#E8EBEC; --muted:#9AA4AA; --ink:#DDE4EA; --ink-fg:#15191C; --focus:#7FB2E8;
+  --ok:#7ACB98; --ok-bg:#1F3328; --warn:#E8B75A; --warn-bg:#3A2E16; --bad:#F08A80; --bad-bg:#3D2020; --out:#A8B6EE; --out-bg:#262D47; --off:#A5A5A5; --off-bg:#2C2C2C;
+  --tag-bg:#EDEDE6; --tag-fg:#15191C; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body);padding:0 16px;}
+.wrap{max-width:1080px;margin:0 auto;padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+h1{font-size:2rem;line-height:1.05}
+h2{font-size:1.35rem}
+.eyebrow{font:600 .75rem/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.conn{font-size:.82rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.conn i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.conn.on i{background:var(--ok)} .conn.err i{background:var(--bad)}
+.banner{background:var(--warn-bg);color:var(--fg);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;font-size:.92rem}
+
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:2px;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.stat:hover{border-color:var(--muted)}
+.stat b{font:700 1.9rem/1 var(--f-display);font-variant-numeric:tabular-nums}
+.stat span{font-size:.8rem;color:var(--muted)}
+.stat.s-out b{color:var(--out)} .stat.s-bad b{color:var(--bad)} .stat.s-warn b{color:var(--warn)} .stat.s-ok b{color:var(--ok)}
+@media (max-width:640px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.stat b{font-size:1.5rem}}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:8px 12px;font:600 1rem var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--fg)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar .grow{flex:1 1 200px;min-width:0}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0;width:100%}
+textarea{min-height:64px;resize:vertical}
+.toolbar select{width:auto}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;font:500 .88rem var(--f-body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:6px;padding:8px 14px;font:600 .95rem var(--f-body);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* etiqueta do cabo: faixa colorida = comprimento */
+.tag{display:inline-flex;align-items:stretch;border-radius:4px;overflow:hidden;background:var(--tag-bg);color:var(--tag-fg);font:700 .86rem/1 var(--f-mono);box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);white-space:nowrap}
+.tag i{width:10px;flex:none}
+.tag span{padding:6px 8px 6px 7px}
+.tag.big{font-size:1.25rem}.tag.big i{width:16px}.tag.big span{padding:10px 12px}
+.len-g i{background:var(--len-g)} .len-b i{background:var(--len-b)} .len-y i{background:var(--len-y)} .len-r i{background:var(--len-r)}
+
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.row{display:grid;grid-template-columns:150px minmax(0,1.4fr) 90px 130px minmax(0,1fr) 20px;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:none;border-left:0;border-right:0;border-top:0;text-align:left;font:inherit;color:inherit;cursor:pointer;width:100%}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--sunken)}
+.row .what{min-width:0}
+.row .what b{font-weight:600}
+.row .what small,.row .loc{color:var(--muted);font-size:.85rem;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .chev{color:var(--muted)}
+.head{cursor:default;font:600 .72rem/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:var(--sunken)}
+.head:hover{background:var(--sunken)}
+@media (max-width:760px){
+  .row{grid-template-columns:auto minmax(0,1fr) auto;row-gap:6px}
+  .row .grp,.row .loc,.row .chev{display:none}
+  .head{display:none}
+}
+.pill{display:inline-block;border-radius:999px;padding:3px 9px;font:600 .78rem/1.2 var(--f-body);white-space:nowrap}
+.p-ok{background:var(--ok-bg);color:var(--ok)} .p-out{background:var(--out-bg);color:var(--out)} .p-bad{background:var(--bad-bg);color:var(--bad)} .p-warn{background:var(--warn-bg);color:var(--warn)} .p-off{background:var(--off-bg);color:var(--off)}
+.flag{font-size:.74rem;color:var(--warn);font-weight:600}
+.grp{font:600 .8rem var(--f-display);letter-spacing:.08em;text-transform:uppercase}
+.grp.ev{color:var(--muted)}
+
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:28px 20px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.empty p{margin:0;max-width:60ch;color:var(--muted)}
+
+.log{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.logi{display:grid;grid-template-columns:110px 140px minmax(0,1fr);gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);align-items:start}
+.logi:last-child{border-bottom:0}
+.logi time{font:500 .82rem var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.logi p{margin:0;min-width:0}
+.logi small{color:var(--muted)}
+@media (max-width:640px){.logi{grid-template-columns:minmax(0,1fr) auto}.logi p{grid-column:1/-1}}
+
+.guide{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card p,.card ul{margin:0;color:var(--fg)}
+.card ul{padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.legend{display:flex;flex-direction:column;gap:8px}
+.legend div{display:flex;align-items:center;gap:10px}
+
+/* painel */
+.scrim{position:fixed;inset:0;background:rgba(10,14,18,.5);display:flex;align-items:flex-start;justify-content:center;padding:max(24px,env(safe-area-inset-top,0px)) 12px 24px;overflow-y:auto;z-index:10}
+.panel{background:var(--surface);color:var(--fg);border-radius:12px;width:100%;max-width:560px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.panel header{align-items:center}
+.x{background:none;border:0;font-size:1.6rem;line-height:1;color:var(--muted);cursor:pointer;padding:4px 8px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted);min-width:0}
+.form .full{grid-column:1/-1}
+@media (max-width:480px){.form{grid-template-columns:1fr}}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.kv{display:grid;grid-template-columns:130px minmax(0,1fr);gap:6px 12px;margin:0;font-size:.93rem}
+.kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.sub{background:var(--sunken);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px}
+.preview{font:500 .85rem var(--f-mono);color:var(--muted);overflow-wrap:anywhere}
+.hist{display:flex;flex-direction:column;gap:6px;font-size:.88rem;max-height:220px;overflow-y:auto}
+.hist div{display:flex;gap:8px}
+.hist time{font-family:var(--f-mono);color:var(--muted);font-size:.8rem;flex:none}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--ink-fg);padding:10px 16px;border-radius:8px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.count{color:var(--muted);font-size:.85rem}
+@media (prefers-reduced-motion:no-preference){.panel{animation:up .18s ease-out}@keyframes up{from{transform:translateY(8px);opacity:.6}}}
+
+:root{--in:#0E8FB3;--in-bg:#DDF1F7;--pout:#C8322B;--pout-bg:#F8E1DF;--bus:#6A4FA3;--bus-bg:#ECE6F6;--voz:#0E8FB3;--inst:#2E7D4F;--ret:#C8322B;--equip:#5E676D;--deck:#E3E1DA;--deck-line:#CFCCC3;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--in:#5CC5E3;--in-bg:#15323B;--pout:#F08A80;--pout-bg:#3D2020;--bus:#B9A3EA;--bus-bg:#2D2640;--voz:#5CC5E3;--inst:#7ACB98;--ret:#F08A80;--equip:#9AA4AA;--deck:#23282C;--deck-line:#343B41;}}
+:root[data-theme="dark"]{--in:#5CC5E3;--in-bg:#15323B;--pout:#F08A80;--pout-bg:#3D2020;--bus:#B9A3EA;--bus-bg:#2D2640;--voz:#5CC5E3;--inst:#7ACB98;--ret:#F08A80;--equip:#9AA4AA;--deck:#23282C;--deck-line:#343B41;}
+.toggle{display:flex;align-items:center;gap:6px;font-size:.9rem;color:var(--muted)} .toggle input{width:auto}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.sec{display:flex;flex-direction:column;gap:8px}
+.sec header{display:flex;justify-content:flex-start;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sec .kind{font:700 .72rem/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase;padding:4px 8px;border-radius:4px}
+.k-in{background:var(--in-bg);color:var(--in)} .k-out{background:var(--pout-bg);color:var(--pout)} .k-bus{background:var(--bus-bg);color:var(--bus)}
+.tbl{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.tr{display:grid;grid-template-columns:64px 130px minmax(0,1.6fr) minmax(0,1fr) 20px;gap:12px;align-items:center;padding:8px 14px;border:0;border-bottom:1px solid var(--line);width:100%;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.tr:last-child{border-bottom:0} .tr:hover{background:var(--sunken)}
+.tr .ch{font:700 1rem var(--f-mono);font-variant-numeric:tabular-nums}
+.tr .port{font:500 .82rem var(--f-mono);color:var(--muted)}
+.tr .nm{min-width:0} .tr .nm b{font-weight:600} .tr .nm small{display:block;color:var(--muted);font-size:.82rem;overflow-wrap:anywhere}
+.tr .lk{font:500 .85rem var(--f-mono);color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.tr .lk:not(:empty)::before{content:"→ ";color:var(--muted)}
+.tr.free .nm{color:var(--muted);font-style:italic}
+.tr .chev{color:var(--muted)}
+.th{cursor:default;background:var(--sunken);font:600 .72rem/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)} .th:hover{background:var(--sunken)}
+.th .lk::before{content:none}
+@media (max-width:640px){.tr{grid-template-columns:52px minmax(0,1fr) 16px}.tr .port,.tr .lk{grid-column:2}.tr .chev{grid-row:1;grid-column:3}.th{display:none}}
+.tp{display:inline-block;font:600 .72rem/1.2 var(--f-body);border-radius:999px;padding:2px 8px;background:var(--sunken);color:var(--muted);margin-left:6px}
+
+/* palco */
+.stagewrap{overflow-x:auto;border-radius:var(--r)}
+.stage{position:relative;min-width:680px;aspect-ratio:16/10;background:var(--deck);border:1px solid var(--deck-line);border-radius:var(--r);
+  background-image:linear-gradient(var(--deck-line) 1px,transparent 1px),linear-gradient(90deg,var(--deck-line) 1px,transparent 1px);background-size:5% 8%;background-position:-1px -1px;touch-action:pan-x pan-y}
+.edge{position:absolute;left:0;right:0;text-align:center;font:700 .75rem/1 var(--f-display);letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+.edge.t{top:-22px} .edge.b{bottom:-24px}
+.stageouter{padding:26px 0 30px;min-width:680px}
+.it{position:absolute;transform:translate(-50%,-50%);background:var(--surface);color:var(--fg);border:1px solid var(--line);border-left:5px solid var(--equip);border-radius:6px;padding:5px 8px;display:flex;flex-direction:column;gap:1px;min-width:84px;max-width:170px;text-align:left;font:inherit;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12);user-select:none;-webkit-user-select:none}
+.it b{font:600 .88rem/1.1 var(--f-display);letter-spacing:.02em}
+.it span{font:500 .72rem/1.2 var(--f-mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it.voz{border-left-color:var(--voz)} .it.instrumento{border-left-color:var(--inst)} .it.retorno{border-left-color:var(--ret)}
+.moving .it{cursor:grab;touch-action:none;outline:1px dashed var(--muted);outline-offset:2px}
+.it.drag{cursor:grabbing;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:5}
+.plegend{display:flex;flex-wrap:wrap;gap:14px;font-size:.85rem;color:var(--muted)}
+.plegend span{display:flex;align-items:center;gap:6px} .plegend i{width:12px;height:12px;border-radius:2px;display:inline-block}
+
+.hint{font-size:.85rem;color:var(--muted);margin:0}
+
+/* Central: cabeçalho + navegação em três páginas (Início, Patch e Palco, Inventário) */
+.topnav{display:flex;gap:6px;flex-wrap:wrap}
+.nav{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:7px 14px;font:600 .95rem var(--f-display);letter-spacing:.05em;text-transform:uppercase;cursor:pointer}
+.nav[aria-current="page"]{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.page{display:flex;flex-direction:column;gap:16px}
+.home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.home-grid{grid-template-columns:1fr}}
+.hcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.hcard h2{font-size:1.6rem}
+.hcard p{margin:0;color:var(--muted)}
+.nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.num{background:var(--sunken);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.num b{font:700 1.6rem/1 var(--f-display);font-variant-numeric:tabular-nums}
+.num span{font-size:.78rem;color:var(--muted)}
+.num.bad b{color:var(--bad)} .num.out b{color:var(--out)} .num.warn b{color:var(--warn)}
+.mini{display:flex;flex-direction:column;gap:6px;font-size:.9rem}
+.mini div{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mini .count{font-size:.85rem}
+.por{white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div><div class="eyebrow">Sonorização · ICNV Rocha Miranda</div><h1>Central de Som</h1></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><div class="conn" id="conn"><i></i><span>Conectando…</span></div><button class="btn" id="btnNome" style="padding:4px 10px;font-size:.85rem">Você: …</button></div>
+  </header>
+  <nav class="topnav" aria-label="Páginas">
+    <button class="nav" data-pg="home" aria-current="page">Início</button>
+    <button class="nav" data-pg="patch">Patch e Palco X32</button>
+    <button class="nav" data-pg="cabos">Inventário de Cabos</button>
+  </nav>
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="page" id="pg-home">
+    <div class="home-grid">
+      <div class="hcard">
+        <div><div class="eyebrow">Mesa Behringer X32 Compact</div><h2>Patch e Palco X32</h2></div>
+        <p>Lista de todos os canais, Mix Bus e saídas da mesa, e o mapa do palco com onde fica cada microfone e retorno.</p>
+        <div class="nums"><div class="num"><b id="h-ch">–</b><span>canais em uso (de 32)</span></div><div class="num"><b id="h-bus">–</b><span>Mix Bus em uso (de 16)</span></div><div class="num"><b id="h-pal">–</b><span>itens no palco</span></div></div>
+        <div class="actions"><button class="btn primary" data-open="patch" data-sub="lista">Abrir lista de canais</button><button class="btn" data-open="patch" data-sub="palco">Ver mapa do palco</button></div>
+      </div>
+      <div class="hcard">
+        <div><div class="eyebrow">Cabos e conectores</div><h2>Inventário de Cabos</h2></div>
+        <p>Todos os cabos com código e cor, quem está com cada um, defeitos e testes mensais.</p>
+        <div class="nums"><div class="num"><b id="h-tot">–</b><span>cabos cadastrados</span></div><div class="num out"><b id="h-out">–</b><span>fora agora</span></div><div class="num bad"><b id="h-bad">–</b><span>com defeito / reparo</span></div></div>
+        <div class="mini" id="h-fora"></div>
+        <div class="actions"><button class="btn primary" data-open="cabos">Abrir inventário</button><button class="btn" data-open="cabos" data-sub="add">+ Cadastrar cabos</button></div>
+      </div>
+    </div>
+    <div class="hcard">
+      <div class="eyebrow">Últimas movimentações de cabos</div>
+      <div class="mini" id="h-mov"></div>
+    </div>
+  </section>
+
+  <section class="page" id="pg-patch" hidden>
+<nav class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="lista">Lista de canais</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="palco">Mapa do palco</button>
+  </nav>
+
+  <section id="v-lista" style="display:flex;flex-direction:column;gap:18px">
+    <div class="toolbar">
+      <input id="p-q" type="search" placeholder="Buscar canal, instrumento, MixBus…" aria-label="Buscar">
+      <label class="toggle"><input type="checkbox" id="p-hideFree"> Esconder livres</label>
+    </div>
+    <div id="p-listBox" style="display:flex;flex-direction:column;gap:18px"></div>
+  </section>
+
+  <section id="v-palco" hidden style="flex-direction:column;gap:12px">
+    <div class="toolbar">
+      <button class="btn" id="btnMove" aria-pressed="false">Mover itens</button>
+      <button class="btn" id="btnAddIt">+ Adicionar ao palco</button>
+      <p class="hint" id="moveHint">Toque num item para ver ou editar. Ative “Mover itens” para arrastar.</p>
+    </div>
+    <div class="plegend"><span><i style="background:var(--voz)"></i>Voz</span><span><i style="background:var(--inst)"></i>Instrumento</span><span><i style="background:var(--ret)"></i>Retorno</span><span><i style="background:var(--equip)"></i>Equipamento</span></div>
+    <div class="stagewrap"><div class="stageouter"><div class="stage" id="stage"><div class="edge t">Fundo do palco</div><div class="edge b">Público</div></div></div></div>
+  </section>
+  </section>
+
+  <section class="page" id="pg-cabos" hidden>
+<section class="stats" aria-label="Resumo">
+    <button class="stat" data-go="todos"><b id="st-total">–</b><span>Cabos cadastrados</span></button>
+    <button class="stat s-ok" data-go="Disponível"><b id="st-ok">–</b><span>Disponíveis</span></button>
+    <button class="stat s-out" data-go="Fora"><b id="st-out">–</b><span>Fora (emprestados)</span></button>
+    <button class="stat s-bad" data-go="defeito"><b id="st-bad">–</b><span>Com defeito / reparo</span></button>
+    <button class="stat s-warn" data-go="testar"><b id="st-test">–</b><span>Precisam de teste</span></button>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="cabos" id="tab-cabos">Cabos</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="mov" id="tab-mov">Movimentações</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="guia" id="tab-guia">Como usar</button>
+  </nav>
+
+  <section id="v-cabos" style="display:flex;flex-direction:column;gap:12px">
+    <div class="toolbar">
+      <input class="grow" id="q" type="search" placeholder="Buscar código, local, observação…" aria-label="Buscar">
+      <div class="chips" id="grpChips">
+        <button class="chip" aria-pressed="true" data-g="">Todos</button>
+        <button class="chip" aria-pressed="false" data-g="Igreja">Igreja</button>
+        <button class="chip" aria-pressed="false" data-g="Eventos">Eventos</button>
+      </div>
+      <select id="fSit" aria-label="Situação">
+        <option value="">Toda situação</option>
+        <option>Disponível</option><option>Fora</option><option value="defeito">Defeito ou reparo</option><option value="testar">Precisa de teste</option><option>Descartado</option>
+      </select>
+      <select id="fTipo" aria-label="Tipo"><option value="">Todo tipo</option></select>
+      <button class="btn primary" id="btnAdd">+ Cadastrar cabos</button>
+    </div>
+    <div class="count" id="count"></div>
+    <div id="listBox"></div>
+  </section>
+
+  <section id="v-mov" hidden>
+    <div id="logBox"></div>
+  </section>
+
+  <section id="v-guia" hidden>
+    <div class="guide">
+      <div class="card">
+        <h3>Cor = comprimento</h3>
+        <div class="legend">
+          <div><span class="tag len-g"><i></i><span>até 3 m</span></span> Verde</div>
+          <div><span class="tag len-b"><i></i><span>4 a 5 m</span></span> Azul</div>
+          <div><span class="tag len-y"><i></i><span>6 a 10 m</span></span> Amarelo</div>
+          <div><span class="tag len-r"><i></i><span>15 m ou mais</span></span> Vermelho</div>
+        </div>
+        <p>Marque a cor com anel ou fita isolante nas <b>duas pontas</b> do cabo.</p>
+      </div>
+      <div class="card">
+        <h3>Código na etiqueta</h3>
+        <p><span class="tag len-y"><i></i><span>XLR-07</span></span> cabo da igreja</p>
+        <p><span class="tag len-b"><i></i><span>EV-P10-02</span></span> cabo de eventos (prefixo <b>EV</b> + fita branca)</p>
+        <p>O sistema gera o próximo número sozinho. Escreva o código na etiqueta das duas pontas.</p>
+      </div>
+      <div class="card">
+        <h3>Os três lugares</h3>
+        <ul>
+          <li><b>Igreja:</b> cabos bons, não saem do templo.</li>
+          <li><b>Eventos:</b> funcionam, mas não são perfeitos. Vão para retiros e passeios.</li>
+          <li><b>Defeito:</b> caixa vermelha. Ninguém usa até consertar ou descartar.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Rotina</h3>
+        <ul>
+          <li>Todo cabo que sair registra <b>Saída</b>; quando voltar, <b>Retorno</b>.</li>
+          <li>Voltou com problema? Marque defeito na hora e coloque na caixa vermelha.</li>
+          <li>Teste mensal com o testador: cabos sem teste há mais de 30 dias aparecem como <span class="flag">testar</span>.</li>
+          <li>Enrole sempre no método <b>over-under</b> e prenda com velcro.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  </section>
+</div>
+<div id="modal"></div>
+<div class="toast" id="toast" hidden></div>
+<script>
+/* ===== Conexão com a Planilha Google (Apps Script) ===== */
+/* Endereço do App da Web (termina em /exec). Usado quando a página está fora do Google, como no GitHub Pages. */
+const API_URL="https://script.google.com/macros/s/AKfycbxRv7fOhoG6ZrCLbuAcZPN7ebUkhOuAdCsAEAtQwCBiXbcJ4PXyOfDnp6KX_cIBTDaV/exec";
+const DENTRO_DO_GOOGLE=typeof google!=="undefined"&&google.script&&google.script.run;
+async function apiFetch(fn,a){
+  const r=fn==="getAll"?await fetch(API_URL+"?acao=getAll",{cache:"no-store"})
+    :await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({acao:fn,args:a})});
+  const j=await r.json();if(!j.ok)throw{code:"server",message:j.erro||"erro"};return j.dados}
+const API=(fn,...a)=>DENTRO_DO_GOOGLE?new Promise((res,rej)=>google.script.run.withSuccessHandler(res).withFailureHandler(e=>rej({code:"server",message:(e&&e.message)||String(e)}))[fn](...a))
+  :apiFetch(fn,a).catch(e=>{throw e&&e.code?e:{code:"server",message:"sem conexão"}});
+const Store={data:null,listeners:[],last:""};
+const hhmm=()=>new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+let refreshing=null;
+async function refresh(){if(refreshing)return refreshing;refreshing=(async()=>{try{const d=await API("getAll");setConn("on","Atualizado às "+hhmm());document.querySelector("#banner").hidden=true;const s=JSON.stringify(d);if(s!==Store.last){Store.last=s;Store.data=d;Store.listeners.forEach(f=>f())}}catch(e){setConn("err","Sem conexão");const b=document.querySelector("#banner");b.hidden=false;b.textContent="Não foi possível falar com a planilha. Verifique a internet; a página tenta de novo sozinha."}finally{refreshing=null}})();return refreshing}
+function colDocs(c){const d=Store.data||{};if(c==="patch")return Object.entries(d.patch||{}).map(([id,rows])=>({id,data:{rows}}));if(c==="palco")return[{id:"layout",data:{items:d.palco||[]}}];return(d[c]||[]).map(x=>({id:x.id,data:x}))}
+const mkSnap=docs=>({docs:docs.map(x=>({id:x.id,exists:true,data:()=>JSON.parse(JSON.stringify(x.data))})),size:docs.length,empty:!docs.length});
+const newId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function docRef(c,id){return{id,path:c+"/"+id,
+  async set(v){await API("setDoc",c,id,v);refresh()},
+  async update(v){await API("updateDoc",c,id,v);refresh()},
+  async delete(){await API("deleteDoc",c,id);refresh()},
+  onSnapshot(next){const f=()=>{if(!Store.data)return;const x=colDocs(c).find(d=>d.id===id);next({id,exists:!!x,data:()=>x?JSON.parse(JSON.stringify(x.data)):undefined})};Store.listeners.push(f);f();return()=>{}}}}
+function query(c,o={}){return{
+  where(){return this},orderBy(f,dir){return query(c,{...o,order:[f,dir]})},limit(n){return query(c,{...o,limit:n})},
+  doc(id){return docRef(c,id||newId("c"))},
+  async add(v){const id=newId("m");await API("setDoc",c,id,v);refresh();return docRef(c,id)},
+  onSnapshot(next){const f=()=>{if(!Store.data)return;let docs=colDocs(c);if(o.order){const[k,dir]=o.order;docs=docs.slice().sort((a,b)=>(a.data[k]>b.data[k]?1:a.data[k]<b.data[k]?-1:0)*(dir==="desc"?-1:1))}if(o.limit)docs=docs.slice(0,o.limit);next(mkSnap(docs))};Store.listeners.push(f);f();return()=>{}}}}
+const SheetDB={collection:c=>query(c),doc:p=>{const[c,id]=p.split("/");return docRef(c,id)}};
+
+/* nome de quem usa: fica guardado neste aparelho */
+function lerNome(){try{return localStorage.getItem("cs-nome")||""}catch{return window.__nome||""}}
+function gravarNome(n){window.__nome=n;try{localStorage.setItem("cs-nome",n)}catch{}}
+function pedirNome(obrig){const atual=lerNome();
+  document.querySelector("#modal").innerHTML=`<div class="scrim"><div class="panel" role="dialog" aria-modal="true"><header><div><div class="eyebrow">Central de Som</div><h2>Qual é o seu nome?</h2></div></header>
+  <p class="hint">Aparece no histórico como “registrado por”. Fica salvo neste aparelho, então só precisa digitar uma vez.</p>
+  <form class="form" id="fNome"><label class="full">Seu nome<input id="n-nome" required maxlength="40" value="${esc(atual)}" placeholder="Ex.: Rodrigo"></label><div class="full actions"><button class="btn primary">Salvar</button>${obrig?"":'<button class="btn" type="button" id="n-canc">Cancelar</button>'}</div></form></div></div>`;
+  const inp=document.querySelector("#n-nome");inp.focus();
+  document.querySelector("#n-canc")?.addEventListener("click",()=>document.querySelector("#modal").innerHTML="");
+  document.querySelector("#fNome").addEventListener("submit",e=>{e.preventDefault();const n=inp.value.trim();if(!n)return;gravarNome(n);window.MYID=n;mostrarNome();document.querySelector("#modal").innerHTML="";renderLog();window.renderHome&&renderHome()})}
+function mostrarNome(){document.querySelector("#btnNome").textContent="Você: "+(window.MYID||"—")+" · trocar"}
+
+const TIPOS=[["XLR","XLR (microfone)"],["P10","P10 (instrumento)"],["P10ST","P10 estéreo (TRS)"],["P2P10","P2 → P10"],["RCA","RCA"],["SPK","Speakon (caixa)"],["AC","Energia / extensão"],["RJ45","Rede (RJ45)"],["USB","USB"],["HDMI","HDMI"],["OUT","Outro"]];
+const TIPO_NOME=Object.fromEntries(TIPOS);
+const TESTE_DIAS=30;
+let db=null, cabos=[], movs=[], ready=false;
+const ui={grupo:"",sit:"",tipo:"",q:"",tab:"cabos"};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const fmtD=s=>{if(!s)return"—";const [y,m,d]=s.slice(0,10).split("-");return `${d}/${m}/${y}`};
+const fmtDT=iso=>{const d=new Date(iso);if(isNaN(d))return"—";return d.toLocaleDateString("pt-BR")+" "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})};
+const lenCls=m=>{m=Number(m)||0;return m<=3?"len-g":m<=5?"len-b":m<=10?"len-y":"len-r"};
+const tagHTML=(c,big)=>`<span class="tag ${lenCls(c.comp)}${big?" big":""}"><i></i><span>${esc(c.codigo)}</span></span>`;
+const precisaTeste=c=>{if(c.situacao==="Descartado")return false;if(!c.ultimoTeste)return true;return (Date.now()-new Date(c.ultimoTeste+"T12:00:00"))/864e5>TESTE_DIAS};
+const sitPill=s=>{const m={"Disponível":"p-ok","Fora":"p-out","Defeito":"p-bad","Em reparo":"p-warn","Descartado":"p-off"};return `<span class="pill ${m[s]||"p-off"}">${esc(s==="Fora"?"Fora":s)}</span>`};
+
+function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2600)}
+function setConn(state,msg){const c=$("#conn");c.className="conn "+state;c.querySelector("span").textContent=msg}
+
+/* ---------- render ---------- */
+TIPOS.forEach(([k,v])=>{const o=document.createElement("option");o.value=k;o.textContent=v;$("#fTipo").appendChild(o)});
+
+function filtered(){
+  const q=ui.q.trim().toLowerCase();
+  return cabos.filter(c=>{
+    if(ui.grupo&&c.grupo!==ui.grupo)return false;
+    if(ui.tipo&&c.tipo!==ui.tipo)return false;
+    if(ui.sit==="defeito"&&!(c.situacao==="Defeito"||c.situacao==="Em reparo"))return false;
+    else if(ui.sit==="testar"&&!precisaTeste(c))return false;
+    else if(ui.sit&&ui.sit!=="defeito"&&ui.sit!=="testar"&&c.situacao!==ui.sit)return false;
+    if(!ui.sit&&c.situacao==="Descartado")return false;
+    if(q){const hay=[c.codigo,TIPO_NOME[c.tipo],c.local,c.obs,c.saida?.com,c.saida?.destino].join(" ").toLowerCase();if(!hay.includes(q))return false}
+    return true;
+  }).sort((a,b)=>a.codigo.localeCompare(b.codigo,"pt-BR",{numeric:true}));
+}
+
+function renderStats(){
+  const vivos=cabos.filter(c=>c.situacao!=="Descartado");
+  $("#st-total").textContent=vivos.length;
+  $("#st-ok").textContent=vivos.filter(c=>c.situacao==="Disponível").length;
+  $("#st-out").textContent=vivos.filter(c=>c.situacao==="Fora").length;
+  $("#st-bad").textContent=vivos.filter(c=>c.situacao==="Defeito"||c.situacao==="Em reparo").length;
+  $("#st-test").textContent=vivos.filter(precisaTeste).length;
+}
+
+function renderList(){
+  const box=$("#listBox");
+  if(!ready){box.innerHTML=`<div class="empty"><p>Carregando o inventário…</p></div>`;$("#count").textContent="";return}
+  if(!cabos.length){
+    box.innerHTML=`<div class="empty"><h2>Nenhum cabo cadastrado ainda</h2>
+    <p>Comece o levantamento: separe os cabos por tipo e comprimento, teste cada um e cadastre em lote. Ex.: 12 cabos XLR de 10 m do grupo Igreja de uma vez só. O sistema gera os códigos (XLR-01, XLR-02…) para você escrever nas etiquetas.</p>
+    <button class="btn primary" onclick="openAdd()" ${db?"":"disabled"}>+ Cadastrar os primeiros cabos</button></div>`;
+    $("#count").textContent="";return;
+  }
+  const rows=filtered();
+  $("#count").textContent=`${rows.length} de ${cabos.length} cabo${cabos.length>1?"s":""}`;
+  if(!rows.length){box.innerHTML=`<div class="empty"><p>Nenhum cabo com esses filtros.</p></div>`;return}
+  box.innerHTML=`<div class="list"><div class="row head"><span>Código</span><span>Tipo</span><span class="grp">Grupo</span><span>Situação</span><span class="loc">Local / com quem</span><span></span></div>`+
+  rows.map(c=>`<button class="row" data-id="${esc(c.id)}">
+    <span>${tagHTML(c)}</span>
+    <span class="what"><b>${esc(TIPO_NOME[c.tipo]||c.tipo)}</b> · ${esc(c.comp)} m<small>${precisaTeste(c)?'<span class="flag">testar</span> · ':''}${c.ultimoTeste?"teste "+fmtD(c.ultimoTeste):"nunca testado"}</small></span>
+    <span class="grp ${c.grupo==="Eventos"?"ev":""}">${esc(c.grupo)}</span>
+    <span>${sitPill(c.situacao)}</span>
+    <span class="loc">${c.situacao==="Fora"&&c.saida?esc(c.saida.com+(c.saida.destino?" · "+c.saida.destino:"")):esc(c.local||"—")}</span>
+    <span class="chev" aria-hidden="true">›</span></button>`).join("")+`</div>`;
+}
+
+const ACAO_TXT={cadastro:["Cadastro","p-off"],saida:["Saída","p-out"],retorno:["Retorno","p-ok"],teste:["Teste","p-ok"],defeito:["Defeito","p-bad"],reparo:["Em reparo","p-warn"],consertado:["Consertado","p-ok"],descarte:["Descarte","p-off"],edicao:["Edição","p-off"]};
+function movLine(m){const a=ACAO_TXT[m.acao]||[m.acao,"p-off"];
+  let det=[m.com&&("com "+m.com),m.destino,m.obs].filter(Boolean).map(esc).join(" · ");
+  if(m.por){const n=nomeDe(m.por);det+=(det?" · ":"")+`<span class="por">registrado por <b>${esc(n||"…")}</b></span>`}
+  return {pill:`<span class="pill ${a[1]}">${a[0]}</span>`,det}}
+function renderLog(){
+  const box=$("#logBox");
+  if(!movs.length){box.innerHTML=`<div class="empty"><h2>Sem movimentações</h2><p>Saídas, retornos, testes e defeitos registrados aparecem aqui, do mais recente para o mais antigo.</p></div>`;return}
+  box.innerHTML=`<div class="log">`+movs.map(m=>{const l=movLine(m);return `<div class="logi"><time>${fmtDT(m.data)}</time><div>${l.pill} <b style="font-family:var(--f-mono)">${esc(m.codigo)}</b></div><p><small>${l.det||""}</small></p></div>`}).join("")+`</div>`;
+}
+function renderAll(){renderStats();renderList();renderLog();if(openId&&!sub)renderDetail()}
+
+/* ---------- filtros e abas ---------- */
+$("#q").addEventListener("input",e=>{ui.q=e.target.value;renderList()});
+$("#grpChips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;ui.grupo=b.dataset.g;document.querySelectorAll("#grpChips .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));renderList()});
+$("#fSit").addEventListener("change",e=>{ui.sit=e.target.value;renderList()});
+$("#fTipo").addEventListener("change",e=>{ui.tipo=e.target.value;renderList()});
+function showTab(t){ui.tab=t;document.querySelectorAll("#pg-cabos .tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
+  $("#v-cabos").style.display=t==="cabos"?"flex":"none";$("#v-mov").hidden=t!=="mov";$("#v-guia").hidden=t!=="guia"}
+document.querySelector("#pg-cabos .tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(b)showTab(b.dataset.tab)});
+document.querySelectorAll(".stat").forEach(s=>s.addEventListener("click",()=>{const g=s.dataset.go;ui.sit=g==="todos"?"":g;$("#fSit").value=ui.sit;showTab("cabos");renderList()}));
+$("#listBox").addEventListener("click",e=>{const r=e.target.closest(".row[data-id]");if(r)openDetail(r.dataset.id)});
+$("#btnAdd").addEventListener("click",()=>openAdd());
+
+/* ---------- painel ---------- */
+let openId=null, sub=null, confirmDel=false;
+function closeModal(){$("#modal").innerHTML="";openId=null;sub=null;confirmDel=false}
+function modal(html){$("#modal").innerHTML=`<div class="scrim" id="scrim"><div class="panel" role="dialog" aria-modal="true">${html}</div></div>`;
+  $("#scrim").addEventListener("click",e=>{if(e.target.id==="scrim")closeModal()})}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modal").innerHTML)closeModal()});
+
+function nextCodes(tipo,grupo,n){
+  const prefix=(grupo==="Eventos"?"EV-":"")+tipo+"-";
+  let max=0;cabos.forEach(c=>{if(c.codigo.startsWith(prefix)){const k=parseInt(c.codigo.slice(prefix.length),10);if(k>max)max=k}});
+  return Array.from({length:n},(_,i)=>prefix+String(max+i+1).padStart(2,"0"));
+}
+
+function openAdd(){
+  if(!db){toast("Sem conexão com a planilha.");return}
+  modal(`<header><h2>Cadastrar cabos</h2><button class="x" aria-label="Fechar" onclick="closeModal()">×</button></header>
+  <form class="form" id="fAdd">
+    <label>Tipo<select id="a-tipo">${TIPOS.map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></label>
+    <label>Comprimento (m)<input id="a-comp" type="number" min="0.5" step="0.5" value="10" required></label>
+    <label>Grupo<select id="a-grupo"><option>Igreja</option><option>Eventos</option></select></label>
+    <label>Quantidade<input id="a-qtd" type="number" min="1" max="50" value="1" required></label>
+    <label class="full">Onde fica guardado<input id="a-local" placeholder="Ex.: Painel A, gancho 3 / Case de eventos"></label>
+    <label>Testado hoje e está bom?<select id="a-teste"><option value="sim">Sim, testado agora</option><option value="nao">Ainda não testado</option></select></label>
+    <label>Marca (opcional)<input id="a-marca" placeholder="Ex.: Santo Angelo"></label>
+    <label class="full">Observação<input id="a-obs" placeholder="Opcional"></label>
+    <div class="full sub"><span class="eyebrow">Códigos que serão criados</span><div class="preview" id="a-prev"></div></div>
+    <div class="full actions"><button class="btn primary" type="submit" id="a-save">Cadastrar</button><button class="btn" type="button" onclick="closeModal()">Cancelar</button></div>
+  </form>`);
+  const upd=()=>{const n=Math.min(50,Math.max(1,parseInt($("#a-qtd").value)||1));$("#a-prev").innerHTML=nextCodes($("#a-tipo").value,$("#a-grupo").value,n).map(c=>`<span class="tag ${lenCls($("#a-comp").value)}"><i></i><span>${c}</span></span>`).join(" ")};
+  ["a-tipo","a-comp","a-grupo","a-qtd"].forEach(id=>$("#"+id).addEventListener("input",upd));upd();
+  $("#fAdd").addEventListener("submit",async e=>{e.preventDefault();
+    const tipo=$("#a-tipo").value,grupo=$("#a-grupo").value,comp=Number($("#a-comp").value),n=Math.min(50,Math.max(1,parseInt($("#a-qtd").value)||1));
+    const testado=$("#a-teste").value==="sim";const codes=nextCodes(tipo,grupo,n);$("#a-save").disabled=true;
+    try{
+      for(const codigo of codes){
+        const ref=db.collection("cabos").doc();
+        await ref.set({codigo,tipo,comp,grupo,situacao:"Disponível",local:$("#a-local").value.trim(),marca:$("#a-marca").value.trim(),obs:$("#a-obs").value.trim(),ultimoTeste:testado?today():"",saida:null,criado:new Date().toISOString()});
+        await logMov({codigo,acao:"cadastro",obs:`${TIPO_NOME[tipo]} ${comp} m · ${grupo}`});
+      }
+      closeModal();toast(n>1?`${n} cabos cadastrados`:`Cabo ${codes[0]} cadastrado`);
+    }catch(err){$("#a-save").disabled=false;toast(errMsg(err))}
+  });
+}
+
+async function logMov(m){await db.collection("movimentos").add({...m,por:window.MYID||"",data:new Date().toISOString()})}
+/* nomes de quem registrou: guardamos só o id; o nome é resolvido na hora */
+function nomeDe(n){return n?(n===window.MYID?n+" (você)":n):""}
+function errMsg(e){const c=e&&e.code;if(c==="not_granted")return"Sem permissão para salvar.";if(c==="unavailable")return"Sem conexão. Tente de novo em instantes.";return"Não foi possível salvar: "+(e?.message||"erro desconhecido")}
+
+function openDetail(id){openId=id;sub=null;confirmDel=false;renderDetail()}
+function renderDetail(){
+  const c=cabos.find(x=>x.id===openId);if(!c){closeModal();return}
+  const hist=movs.filter(m=>m.codigo===c.codigo).slice(0,20);
+  const can=!!db;
+  let btns="";
+  if(c.situacao==="Disponível")btns=`<button class="btn primary" data-s="saida">Registrar saída</button><button class="btn" data-s="teste">Registrar teste</button><button class="btn danger" data-s="defeito">Marcar defeito</button>`;
+  else if(c.situacao==="Fora")btns=`<button class="btn primary" data-s="retorno">Registrar retorno</button>`;
+  else if(c.situacao==="Defeito")btns=`<button class="btn" data-s="reparo">Enviar para reparo</button><button class="btn primary" data-s="consertado">Consertado, voltou a funcionar</button><button class="btn danger" data-s="descarte">Descartar</button>`;
+  else if(c.situacao==="Em reparo")btns=`<button class="btn primary" data-s="consertado">Voltou do reparo</button><button class="btn danger" data-s="descarte">Descartar</button>`;
+  btns+=`<button class="btn" data-s="editar">Editar</button>`;
+  modal(`<header><div style="display:flex;flex-direction:column;gap:8px">${tagHTML(c,true)}<span>${sitPill(c.situacao)} ${precisaTeste(c)?'<span class="flag">precisa de teste</span>':''}</span></div><button class="x" aria-label="Fechar" onclick="closeModal()">×</button></header>
+  <dl class="kv">
+    <dt>Tipo</dt><dd>${esc(TIPO_NOME[c.tipo]||c.tipo)}</dd>
+    <dt>Comprimento</dt><dd>${esc(c.comp)} m</dd>
+    <dt>Grupo</dt><dd>${esc(c.grupo)}</dd>
+    <dt>Guardado em</dt><dd>${esc(c.local||"—")}</dd>
+    ${c.situacao==="Fora"&&c.saida?`<dt>Está com</dt><dd><b>${esc(c.saida.com)}</b>${c.saida.destino?" · "+esc(c.saida.destino):""}<br><small>saiu ${fmtD(c.saida.data)}${c.saida.prev?" · volta prevista "+fmtD(c.saida.prev):""}</small></dd>`:""}
+    <dt>Último teste</dt><dd>${fmtD(c.ultimoTeste)}</dd>
+    ${c.marca?`<dt>Marca</dt><dd>${esc(c.marca)}</dd>`:""}
+    ${c.defeito?`<dt>Defeito</dt><dd>${esc(c.defeito)}</dd>`:""}
+    ${c.obs?`<dt>Observação</dt><dd>${esc(c.obs)}</dd>`:""}
+  </dl>
+  <div class="actions" id="acts">${can?btns:'<span class="count">Somente leitura</span>'}</div>
+  <div id="subBox"></div>
+  <div style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Histórico</span>
+  <div class="hist">${hist.length?hist.map(m=>{const l=movLine(m);return `<div><time>${fmtDT(m.data)}</time><span>${l.pill} ${l.det}</span></div>`}).join(""):'<span class="count">Sem registros.</span>'}</div></div>`);
+  $("#acts").addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(!b)return;sub=b.dataset.s;confirmDel=false;renderSub(c)});
+  if(sub)renderSub(c);
+}
+
+function renderSub(c){
+  const box=$("#subBox");let h="";
+  if(sub==="saida")h=`<form class="sub form" id="fs"><label>Com quem vai ficar<input id="s-com" required placeholder="Nome do responsável"></label><label>Para onde / evento<input id="s-dest" placeholder="Ex.: Retiro de jovens"></label><label>Volta prevista<input id="s-prev" type="date"></label><label>Observação<input id="s-obs"></label><div class="full actions"><button class="btn primary">Confirmar saída</button></div></form>`;
+  if(sub==="retorno")h=`<form class="sub form" id="fs"><label>Como voltou?<select id="s-est"><option value="ok">Voltou funcionando</option><option value="bad">Voltou com defeito</option></select></label><label>Guardado em<input id="s-local" value="${esc(c.local||"")}"></label><label class="full">Observação / defeito<input id="s-obs" placeholder="Ex.: chiando ao mexer no conector"></label><div class="full actions"><button class="btn primary">Confirmar retorno</button></div></form>`;
+  if(sub==="teste")h=`<form class="sub form" id="fs"><label>Resultado<select id="s-est"><option value="ok">Passou no teste</option><option value="bad">Falhou (com defeito)</option></select></label><label>Observação<input id="s-obs"></label><div class="full actions"><button class="btn primary">Salvar teste</button></div></form>`;
+  if(sub==="defeito")h=`<form class="sub form" id="fs"><label class="full">Qual o problema?<input id="s-obs" required placeholder="Ex.: sem sinal, chiado, conector solto"></label><div class="full actions"><button class="btn danger">Marcar defeito</button></div><p class="full count" style="margin:0">Coloque o cabo na caixa vermelha e marque com fita escrita o defeito.</p></form>`;
+  if(sub==="reparo")h=`<form class="sub form" id="fs"><label class="full">Com quem / onde está o reparo<input id="s-obs" placeholder="Ex.: loja do centro, técnico João"></label><div class="full actions"><button class="btn primary">Confirmar</button></div></form>`;
+  if(sub==="consertado")h=`<form class="sub form" id="fs"><label>Guardado em<input id="s-local" value="${esc(c.local||"")}"></label><label>Observação<input id="s-obs" placeholder="Ex.: trocado conector XLR"></label><div class="full actions"><button class="btn primary">Voltar para disponível</button></div></form>`;
+  if(sub==="descarte")h=`<form class="sub form" id="fs"><label class="full">Motivo<input id="s-obs" placeholder="Ex.: sem conserto"></label><div class="full actions"><button class="btn danger">Confirmar descarte</button></div></form>`;
+  if(sub==="editar")h=`<form class="sub form" id="fs">
+    <label>Código<input id="e-cod" value="${esc(c.codigo)}" required></label>
+    <label>Comprimento (m)<input id="e-comp" type="number" min="0.5" step="0.5" value="${esc(c.comp)}"></label>
+    <label>Tipo<select id="e-tipo">${TIPOS.map(([k,v])=>`<option value="${k}" ${k===c.tipo?"selected":""}>${v}</option>`).join("")}</select></label>
+    <label>Grupo<select id="e-grupo"><option ${c.grupo==="Igreja"?"selected":""}>Igreja</option><option ${c.grupo==="Eventos"?"selected":""}>Eventos</option></select></label>
+    <label class="full">Guardado em<input id="e-local" value="${esc(c.local||"")}"></label>
+    <label>Marca<input id="e-marca" value="${esc(c.marca||"")}"></label>
+    <label>Observação<input id="e-obs" value="${esc(c.obs||"")}"></label>
+    <p class="full count" style="margin:0">Mudou de grupo? Ajuste o código (ex.: XLR-07 → EV-XLR-01) e troque a etiqueta.</p>
+    <div class="full actions"><button class="btn primary">Salvar</button><button class="btn danger" type="button" id="e-del">${confirmDel?"Toque de novo para excluir":"Excluir cabo"}</button></div></form>`;
+  box.innerHTML=h;
+  const f=$("#fs");if(!f)return;
+  const v=id=>($("#"+id)?.value||"").trim();
+  f.querySelector("input,select")?.focus();
+  $("#e-del")?.addEventListener("click",async()=>{if(!confirmDel){confirmDel=true;$("#e-del").textContent="Toque de novo para excluir";return}
+    try{await db.doc("cabos/"+c.id).delete();await logMov({codigo:c.codigo,acao:"descarte",obs:"Excluído do inventário"});closeModal();toast(`${c.codigo} excluído`)}catch(err){toast(errMsg(err))}});
+  f.addEventListener("submit",async e=>{e.preventDefault();const ref=db.doc("cabos/"+c.id);f.querySelectorAll("button").forEach(b=>b.disabled=true);
+    try{
+      if(sub==="saida"){const s={com:v("s-com"),destino:v("s-dest"),prev:v("s-prev"),data:today()};await ref.update({situacao:"Fora",saida:s});await logMov({codigo:c.codigo,acao:"saida",com:s.com,destino:s.destino,obs:v("s-obs")});toast(`Saída de ${c.codigo} registrada`)}
+      if(sub==="retorno"){const bad=v("s-est")==="bad";await ref.update({situacao:bad?"Defeito":"Disponível",saida:null,local:v("s-local"),defeito:bad?v("s-obs"):""});await logMov({codigo:c.codigo,acao:"retorno",com:c.saida?.com||"",obs:v("s-obs")});if(bad)await logMov({codigo:c.codigo,acao:"defeito",obs:v("s-obs")});toast(bad?`${c.codigo} voltou com defeito`:`${c.codigo} de volta`)}
+      if(sub==="teste"){const bad=v("s-est")==="bad";await ref.update({ultimoTeste:today(),...(bad?{situacao:"Defeito",defeito:v("s-obs")}:{})});await logMov({codigo:c.codigo,acao:bad?"defeito":"teste",obs:(bad?"Falhou no teste. ":"Passou no teste. ")+v("s-obs")});toast("Teste registrado")}
+      if(sub==="defeito"){await ref.update({situacao:"Defeito",defeito:v("s-obs")});await logMov({codigo:c.codigo,acao:"defeito",obs:v("s-obs")});toast(`${c.codigo} marcado com defeito`)}
+      if(sub==="reparo"){await ref.update({situacao:"Em reparo"});await logMov({codigo:c.codigo,acao:"reparo",obs:v("s-obs")});toast("Enviado para reparo")}
+      if(sub==="consertado"){await ref.update({situacao:"Disponível",defeito:"",ultimoTeste:today(),local:v("s-local")});await logMov({codigo:c.codigo,acao:"consertado",obs:v("s-obs")});toast(`${c.codigo} disponível de novo`)}
+      if(sub==="descarte"){await ref.update({situacao:"Descartado"});await logMov({codigo:c.codigo,acao:"descarte",obs:v("s-obs")});toast(`${c.codigo} descartado`)}
+      if(sub==="editar"){const cod=v("e-cod").toUpperCase();if(cabos.some(x=>x.id!==c.id&&x.codigo===cod)){toast(`Já existe um cabo ${cod}`);f.querySelectorAll("button").forEach(b=>b.disabled=false);return}
+        await ref.update({codigo:cod,comp:Number(v("e-comp"))||c.comp,tipo:v("e-tipo"),grupo:v("e-grupo"),local:v("e-local"),marca:v("e-marca"),obs:v("e-obs")});
+        await logMov({codigo:cod,acao:"edicao",obs:cod!==c.codigo?`Código alterado de ${c.codigo}`:"Dados atualizados"});toast("Alterações salvas")}
+      sub=null;if(openId)renderDetail();
+    }catch(err){toast(errMsg(err));f.querySelectorAll("button").forEach(b=>b.disabled=false)}
+  });
+}
+
+/* ---------- dados ---------- */
+renderAll();
+window.initCabos=function(d){db=d;
+  if(!db){$("#btnAdd").disabled=true;ready=true;renderAll();return}
+  db.collection("cabos").limit(1000).onSnapshot(s=>{cabos=s.docs.map(x=>({id:x.id,...x.data()}));ready=true;renderAll();window.renderHome&&renderHome()},e=>{setConn("err","Erro ao carregar");toast(errMsg(e))});
+  db.collection("movimentos").orderBy("data","desc").limit(300).onSnapshot(s=>{movs=s.docs.map(x=>({id:x.id,...x.data()}));renderLog();if(openId&&!sub)renderDetail();window.renderHome&&renderHome()},()=>{});
+};
+window.cabosState=()=>({cabos,movs,precisaTeste});
+
+(function(){
+
+const SECOES=[
+ ["entradas","Canais de entrada","k-in","Entrada","Canal · origem · nome"],
+ ["auxiliares","Entradas auxiliares e talkback","k-in","Entrada",""],
+ ["mixbus","Mix Bus","k-bus","Mix",""],
+ ["saidas_xlr","Saídas XLR da mesa","k-out","Saída",""],
+ ["saidas_p10","Saídas P10 (Aux Out)","k-out","Saída",""],
+ ["saidas_stage","Saídas da Stage Box A","k-out","Saída",""]];
+let db=null; window.patchState={patch:{},palco:[]}; let patch={}, palco=[], ready=false, moving=false;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2600)}
+function errMsg(e){if(e?.code==="not_granted")return"Sem permissão para editar. Peça acesso de edição ao responsável.";if(e?.code==="unavailable")return"Sem conexão. Tente de novo.";return"Não foi possível salvar: "+(e?.message||"erro")}
+function setConn(c,m){const e=$("#conn");e.className="conn "+c;e.querySelector("span").textContent=m}
+
+/* ---------- lista ---------- */
+function renderList(){
+  const box=$("#p-listBox");
+  if(!ready){box.innerHTML='<div class="empty">Carregando o patch…</div>';return}
+  const q=$("#p-q").value.trim().toLowerCase(),hide=$("#p-hideFree").checked;
+  let any=false;
+  box.innerHTML=SECOES.map(([key,title,k,kind])=>{
+    const rows=(patch[key]||[]).map((r,i)=>({...r,i})).filter(r=>(!hide||r.nome)&&(!q||[r.canal,r.porta,r.nome,r.liga,r.obs,r.tipo].join(" ").toLowerCase().includes(q)));
+    if(!rows.length)return"";any=true;
+    const used=(patch[key]||[]).filter(r=>r.nome).length,total=(patch[key]||[]).length;
+    return `<section class="sec"><header><span class="kind ${k}">${kind}</span><h2>${title}</h2><span class="hint">${used} de ${total} em uso</span></header>
+    <div class="tbl"><div class="tr th"><span>Nº</span><span>Porta</span><span>Nome</span><span class="lk">Liga em</span><span></span></div>`+
+    rows.map(r=>`<button class="tr ${r.nome?"":"free"}" data-s="${key}" data-i="${r.i}">
+      <span class="ch">${esc(r.canal)}</span><span class="port">${esc(r.porta)}</span>
+      <span class="nm">${r.nome?`<b>${esc(r.nome)}</b>${r.tipo&&!["Saída","Mix"].includes(r.tipo)?`<span class="tp">${esc(r.tipo)}</span>`:""}`:"livre"}${r.obs?`<small>${esc(r.obs)}</small>`:""}</span>
+      <span class="lk">${esc(r.liga)}</span><span class="chev" aria-hidden="true">›</span></button>`).join("")+`</div></section>`;
+  }).join("");
+  if(!any)box.innerHTML=Object.keys(patch).length?'<div class="empty">Nada encontrado com essa busca.</div>':'<div class="empty">O patch ainda não foi carregado. Quando os dados chegarem, as entradas, os Mix Bus e as saídas aparecem aqui.</div>';
+}
+$("#p-q").addEventListener("input",renderList);$("#p-hideFree").addEventListener("change",renderList);
+$("#p-listBox").addEventListener("click",e=>{const b=e.target.closest(".tr[data-s]");if(b)editRow(b.dataset.s,+b.dataset.i)});
+
+function modalP(h){$("#modal").innerHTML=`<div class="scrim" id="scrim"><div class="panel" role="dialog" aria-modal="true">${h}</div></div>`;$("#scrim").addEventListener("click",e=>{if(e.target.id==="scrim")closeModal()});$("#modal").querySelector("input")?.focus()}
+
+function editRow(key,i){
+  const r=patch[key][i];const sec=SECOES.find(s=>s[0]===key);
+  modalP(`<header><div><div class="eyebrow">${esc(sec[1])}</div><h2>${esc(r.canal)} · ${esc(r.porta)}</h2></div><button class="x" onclick="closeModal()" aria-label="Fechar">×</button></header>
+  <form class="form" id="fr">
+    <label class="full">Nome<input id="r-nome" value="${esc(r.nome)}" placeholder="Deixe vazio se estiver livre"></label>
+    <label>Tipo<input id="r-tipo" value="${esc(r.tipo)}" placeholder="Ex.: Sem fio, Com fio, Instrumento"></label>
+    <label>Liga em<input id="r-liga" value="${esc(r.liga)}" placeholder="Ex.: MixBus 6, XLR Out 1"></label>
+    <label class="full">Observação<input id="r-obs" value="${esc(r.obs)}" placeholder="Ex.: cor da fita, quem usa"></label>
+    <div class="full actions"><button class="btn primary" ${db?"":"disabled"}>Salvar</button><button class="btn" type="button" id="r-clr" ${db?"":"disabled"}>Marcar como livre</button></div>
+  </form>`);
+  const save=async(vals)=>{const rows=patch[key].map((x,j)=>j===i?{...x,...vals}:x);try{await db.doc("patch/"+key).set({rows});closeModal();toast(`${r.canal} atualizado`)}catch(e){toast(errMsg(e))}};
+  $("#fr").addEventListener("submit",e=>{e.preventDefault();save({nome:$("#r-nome").value.trim(),tipo:$("#r-tipo").value.trim(),liga:$("#r-liga").value.trim(),obs:$("#r-obs").value.trim()})});
+  $("#r-clr").addEventListener("click",()=>save({nome:"",liga:"",obs:""}));
+}
+
+/* ---------- palco ---------- */
+function renderStage(){
+  const st=$("#stage");st.querySelectorAll(".it").forEach(n=>n.remove());
+  st.classList.toggle("moving",moving);
+  palco.forEach(it=>{const b=document.createElement("button");b.className="it "+(it.tipo||"equip");b.dataset.id=it.id;
+    b.style.left=it.x+"%";b.style.top=it.y+"%";
+    b.innerHTML=`<b>${esc(it.rotulo)}</b>${it.canal?`<span>Canal ${esc(it.canal)}</span>`:""}${it.retorno?`<span>Ret. ${esc(it.retorno)}</span>`:""}`;
+    st.appendChild(b)});
+  if(ready&&!palco.length){const e=document.createElement("div");e.className="it";e.style.left="50%";e.style.top="50%";e.innerHTML="<b>Palco vazio</b><span>Use + Adicionar ao palco</span>";st.appendChild(e)}
+}
+let drag=null;
+$("#stage").addEventListener("pointerdown",e=>{const b=e.target.closest(".it[data-id]");if(!b||!moving||!db)return;e.preventDefault();b.setPointerCapture(e.pointerId);
+  drag={b,id:b.dataset.id,moved:false,sx:e.clientX,sy:e.clientY};b.classList.add("drag")});
+$("#stage").addEventListener("pointermove",e=>{if(!drag)return;const r=$("#stage").getBoundingClientRect();
+  if(Math.abs(e.clientX-drag.sx)+Math.abs(e.clientY-drag.sy)>3)drag.moved=true;
+  const x=Math.min(97,Math.max(3,(e.clientX-r.left)/r.width*100)),y=Math.min(96,Math.max(4,(e.clientY-r.top)/r.height*100));
+  drag.x=Math.round(x*10)/10;drag.y=Math.round(y*10)/10;drag.b.style.left=drag.x+"%";drag.b.style.top=drag.y+"%"});
+const endDrag=async()=>{if(!drag)return;const d=drag;drag=null;d.b.classList.remove("drag");
+  if(d.moved&&d.x!=null){palco=palco.map(it=>it.id===d.id?{...it,x:d.x,y:d.y}:it);await savePalco("Posição salva")}};
+$("#stage").addEventListener("pointerup",endDrag);$("#stage").addEventListener("pointercancel",endDrag);
+$("#stage").addEventListener("click",e=>{const b=e.target.closest(".it[data-id]");if(b&&!moving)editItem(b.dataset.id)});
+async function savePalco(msg){try{await db.doc("palco/layout").set({items:palco});if(msg)toast(msg)}catch(e){toast(errMsg(e))}}
+$("#btnMove").addEventListener("click",()=>{if(!db){toast("Sem conexão com a planilha.");return}moving=!moving;$("#btnMove").setAttribute("aria-pressed",moving);$("#btnMove").textContent=moving?"Concluir":"Mover itens";$("#moveHint").textContent=moving?"Arraste os itens até a posição real. Cada movimento é salvo sozinho.":"Toque num item para ver ou editar. Ative “Mover itens” para arrastar.";renderStage()});
+$("#btnAddIt").addEventListener("click",()=>editItem(null));
+
+function editItem(id){
+  const it=id?palco.find(x=>x.id===id):{rotulo:"",tipo:"voz",canal:"",retorno:"",x:50,y:50};if(!it)return;
+  modalP(`<header><h2>${id?"Editar item":"Adicionar ao palco"}</h2><button class="x" onclick="closeModal()" aria-label="Fechar">×</button></header>
+  <form class="form" id="fi">
+    <label class="full">Nome no mapa<input id="i-rot" required value="${esc(it.rotulo)}" placeholder="Ex.: Voz fem. 2, Púlpito, Caixa PA L"></label>
+    <label>Tipo<select id="i-tipo">${[["voz","Voz"],["instrumento","Instrumento"],["retorno","Retorno"],["equip","Equipamento"]].map(([k,v])=>`<option value="${k}" ${it.tipo===k?"selected":""}>${v}</option>`).join("")}</select></label>
+    <label>Canal na mesa<input id="i-can" value="${esc(it.canal)}" placeholder="Ex.: 11"></label>
+    <label class="full">Retorno (Mix Bus)<input id="i-ret" value="${esc(it.retorno)}" placeholder="Ex.: Bus 6"></label>
+    <div class="full actions"><button class="btn primary" ${db?"":"disabled"}>Salvar</button>${id?`<button class="btn danger" type="button" id="i-del" ${db?"":"disabled"}>Remover do mapa</button>`:""}</div>
+  </form>`);
+  $("#fi").addEventListener("submit",async e=>{e.preventDefault();const v={rotulo:$("#i-rot").value.trim(),tipo:$("#i-tipo").value,canal:$("#i-can").value.trim(),retorno:$("#i-ret").value.trim()};
+    palco=id?palco.map(x=>x.id===id?{...x,...v}:x):[...palco,{id:"i"+Date.now().toString(36),...v,x:50,y:50}];
+    await savePalco(id?"Item atualizado":"Item adicionado no centro do palco");closeModal();renderStage()});
+  let armed=false;$("#i-del")?.addEventListener("click",async e=>{if(!armed){armed=true;e.target.textContent="Toque de novo para remover";return}
+    palco=palco.filter(x=>x.id!==id);await savePalco("Item removido");closeModal();renderStage()});
+}
+
+/* ---------- abas e dados ---------- */
+document.querySelector("#pg-patch .tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;document.querySelectorAll("#pg-patch .tab").forEach(t=>t.setAttribute("aria-selected",t===b));
+  $("#v-lista").style.display=b.dataset.tab==="lista"?"flex":"none";const p=$("#v-palco");p.hidden=b.dataset.tab!=="palco";p.style.display=p.hidden?"":"flex"});
+renderList();renderStage();
+
+window.initPatch=function(d){db=d;
+  if(!db){ready=true;renderList();renderStage();return}
+  db.collection("patch").onSnapshot(s=>{patch={};s.docs.forEach(x=>patch[x.id]=x.data().rows||[]);window.patchState.patch=patch;ready=true;renderList();window.renderHome&&renderHome()},e=>toast(errMsg(e)));
+  db.doc("palco/layout").onSnapshot(s=>{if(drag)return;palco=(s.exists&&s.data().items)||[];window.patchState.palco=palco;ready=true;renderStage();window.renderHome&&renderHome()},()=>{});
+};
+})();
+
+
+(function(){
+const q=s=>document.querySelector(s);
+const PAGES=["home","patch","cabos"];
+function go(p,sub){if(!PAGES.includes(p))p="home";
+  PAGES.forEach(x=>{const el=q("#pg-"+x);el.hidden=x!==p;el.style.display=x===p?"flex":"none"});
+  document.querySelectorAll(".nav").forEach(n=>n.setAttribute("aria-current",n.dataset.pg===p?"page":"false"));
+  if(p==="patch"&&sub){const t=document.querySelector('#pg-patch .tab[data-tab="'+sub+'"]');t&&t.click()}
+  if(p==="cabos"&&sub==="add")openAdd();
+  try{history.replaceState(null,"",p==="home"?"#":"#"+p)}catch{}
+  window.scrollTo({top:0});
+}
+document.querySelector(".topnav").addEventListener("click",e=>{const b=e.target.closest(".nav");if(b)go(b.dataset.pg)});
+q("#pg-home").addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(b)go(b.dataset.open,b.dataset.sub)});
+window.renderHome=function(){
+  const ps=window.patchState||{patch:{},palco:[]};const ent=(ps.patch.entradas||[]);const mb=(ps.patch.mixbus||[]);
+  q("#h-ch").textContent=ent.length?ent.filter(r=>r.nome).length:"–";
+  q("#h-bus").textContent=mb.length?mb.filter(r=>r.nome).length:"–";
+  q("#h-pal").textContent=ps.palco.length||"–";
+  const cs=window.cabosState?window.cabosState():{cabos:[],movs:[]};const viv=cs.cabos.filter(c=>c.situacao!=="Descartado");
+  q("#h-tot").textContent=viv.length;q("#h-out").textContent=viv.filter(c=>c.situacao==="Fora").length;
+  q("#h-bad").textContent=viv.filter(c=>c.situacao==="Defeito"||c.situacao==="Em reparo").length;
+  const fora=viv.filter(c=>c.situacao==="Fora").slice(0,5);
+  q("#h-fora").innerHTML=fora.length?'<span class="eyebrow">Fora agora</span>'+fora.map(c=>`<div>${tagHTML(c)} <span>com <b>${esc(c.saida?.com||"—")}</b>${c.saida?.destino?" · "+esc(c.saida.destino):""}</span></div>`).join(""):(viv.length?'<span class="count">Nenhum cabo fora agora.</span>':'<span class="count">Nenhum cabo cadastrado ainda. Comece o levantamento em “Cadastrar cabos”.</span>');
+  const mv=cs.movs.slice(0,6);
+  q("#h-mov").innerHTML=mv.length?mv.map(m=>{const l=movLine(m);return `<div><time style="font-family:var(--f-mono);font-size:.8rem;color:var(--muted)">${fmtDT(m.data)}</time> ${l.pill} <b style="font-family:var(--f-mono)">${esc(m.codigo)}</b> <span class="count">${l.det||""}</span></div>`}).join(""):'<span class="count">As saídas, retornos, testes e defeitos registrados no inventário aparecem aqui.</span>';
+};
+const h=(location.hash||"").replace("#","");go(PAGES.includes(h)?h:"home");renderHome();
+(async()=>{
+  const d=SheetDB;window.MYID=lerNome();mostrarNome();q("#btnNome").addEventListener("click",()=>pedirNome(false));
+  if(!window.MYID)pedirNome(true);
+  refresh();setInterval(()=>{if(!document.hidden)refresh()},15000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
+  window.initCabos(d);window.initPatch(d);renderHome();
+})();
+})();
+</script>
+
+</body>
+</html>
