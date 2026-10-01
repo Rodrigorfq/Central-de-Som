@@ -222,7 +222,7 @@ textarea{min-height:64px;resize:vertical}
   input,select,textarea{font-size:16px}              /* evita o zoom automático do iPhone */
   .btn{min-height:44px}
   .chip{padding:9px 14px}
-  .topnav{position:fixed;left:0;right:0;bottom:0;z-index:9;display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 16px rgba(0,0,0,.08)}
+  .topnav{position:fixed;left:0;right:0;bottom:0;z-index:9;display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 16px rgba(0,0,0,.08)}
   .nav{border:0;border-radius:10px;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;font-size:.78rem;letter-spacing:.04em;min-height:52px}
   .nav .ico{display:block;font:400 1.35rem/1 var(--f-body)}
   .nav .long{display:none} .nav .short{display:inline}
@@ -246,6 +246,33 @@ textarea{min-height:64px;resize:vertical}
   .stagehint{display:block}
   .stagewrap{margin-inline:-12px;padding-inline:12px}
 }
+
+/* ===== Equipamentos ===== */
+.home-grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.p-store{background:var(--sunken);color:var(--fg)}
+.eqgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.eqcard{display:flex;gap:12px;align-items:stretch;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px;text-align:left;font:inherit;color:inherit;cursor:pointer;min-width:0}
+.eqcard:hover{border-color:var(--muted)}
+.eqthumb{width:84px;height:84px;flex:none;border-radius:6px;object-fit:cover;background:var(--sunken)}
+.semfoto{display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--muted)}
+.eqbody{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.eqtop{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.eqbody b{font-weight:600;line-height:1.25;overflow-wrap:anywhere}
+.eqbody small{color:var(--muted);font-size:.83rem;overflow-wrap:anywhere}
+.eqtag span{padding:4px 7px}
+.eqtag.ev{box-shadow:inset 0 0 0 2px var(--muted)}
+.eqfoto{display:flex;flex-direction:column;gap:10px}
+.eqbig{width:100%;max-height:340px;object-fit:contain;border-radius:var(--r);background:var(--sunken)}
+.eqbig.semfoto{height:140px;font-size:3rem}
+.fotobtn{display:inline-flex;align-items:center}
+a.btn{text-decoration:none;display:inline-flex;align-items:center}
+#pg-equip .stats{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:640px){
+  #pg-equip .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .eqgrid{grid-template-columns:1fr}
+  .home-grid{grid-template-columns:1fr}
+  .nav{font-size:.72rem}
+}
 </style>
 </head>
 <body>
@@ -259,6 +286,7 @@ textarea{min-height:64px;resize:vertical}
     <button class="nav" data-pg="home" aria-current="page"><span class="ico" aria-hidden="true">⌂</span><span>Início</span></button>
     <button class="nav" data-pg="patch"><span class="ico" aria-hidden="true">▦</span><span class="long">Patch e Palco X32</span><span class="short">Patch e Palco</span></button>
     <button class="nav" data-pg="cabos"><span class="ico" aria-hidden="true">≋</span><span class="long">Inventário de Cabos</span><span class="short">Cabos</span></button>
+    <button class="nav" data-pg="equip"><span class="ico" aria-hidden="true">♪</span><span class="long">Equipamentos e Instrumentos</span><span class="short">Equip.</span></button>
   </nav>
   <div class="banner" id="banner" hidden></div>
 
@@ -277,9 +305,15 @@ textarea{min-height:64px;resize:vertical}
         <div class="mini" id="h-fora"></div>
         <div class="actions"><button class="btn primary" data-open="cabos">Abrir inventário</button><button class="btn" data-open="cabos" data-sub="add">+ Cadastrar cabos</button></div>
       </div>
+      <div class="hcard">
+        <div><div class="eyebrow">Som e instrumentos</div><h2>Equipamentos e Instrumentos</h2></div>
+        <p>Caixas, microfones, mesa, retornos e instrumentos, com foto, separados entre Igreja e Eventos.</p>
+        <div class="nums"><div class="num"><b id="h-eq">–</b><span>itens cadastrados</span></div><div class="num out"><b id="h-eq-emp">–</b><span>emprestados</span></div><div class="num bad"><b id="h-eq-bad">–</b><span>com defeito / reparo</span></div></div>
+        <div class="actions"><button class="btn primary" data-open="equip">Abrir equipamentos</button><button class="btn" data-open="equip" data-sub="add">+ Cadastrar</button></div>
+      </div>
     </div>
     <div class="hcard">
-      <div class="eyebrow">Últimas movimentações de cabos</div>
+      <div class="eyebrow">Últimas movimentações</div>
       <div class="mini" id="h-mov"></div>
     </div>
   </section>
@@ -385,6 +419,25 @@ textarea{min-height:64px;resize:vertical}
       </div>
     </div>
   </section>
+  </section>
+
+  <section class="page" id="pg-equip" hidden>
+    <section class="stats" aria-label="Resumo dos equipamentos">
+      <button class="stat" data-go=""><b id="eq-st-total">–</b><span>Cadastrados</span></button>
+      <button class="stat s-ok" data-go="Em uso"><b id="eq-st-uso">–</b><span>Em uso</span></button>
+      <button class="stat" data-go="Guardado"><b id="eq-st-guard">–</b><span>Guardados</span></button>
+      <button class="stat s-out" data-go="Emprestado"><b id="eq-st-emp">–</b><span>Emprestados</span></button>
+      <button class="stat s-bad" data-go="ruim"><b id="eq-st-ruim">–</b><span>Com defeito / reparo</span></button>
+    </section>
+    <div class="toolbar">
+      <input class="grow" id="eq-q" type="search" placeholder="Buscar nome, marca, código, local…" aria-label="Buscar equipamento">
+      <div class="chips" id="eq-cat"><button class="chip" aria-pressed="true" data-v="">Tudo</button><button class="chip" aria-pressed="false" data-v="Som">Som</button><button class="chip" aria-pressed="false" data-v="Instrumento">Instrumentos</button></div>
+      <div class="chips" id="eq-grp"><button class="chip" aria-pressed="true" data-v="">Igreja e Eventos</button><button class="chip" aria-pressed="false" data-v="Igreja">Igreja</button><button class="chip" aria-pressed="false" data-v="Eventos">Eventos</button></div>
+      <select id="eq-sit" aria-label="Situação"><option value="">Toda situação</option><option>Em uso</option><option>Guardado</option><option>Emprestado</option><option value="ruim">Com defeito ou reparo</option><option>Descartado</option></select>
+      <button class="btn primary" id="eq-add">+ Cadastrar</button>
+    </div>
+    <div class="count" id="eq-count"></div>
+    <div id="eq-list"></div>
   </section>
 </div>
 <div id="modal"></div>
@@ -497,7 +550,7 @@ function renderList(){
     <span class="chev" aria-hidden="true">›</span></button>`).join("")+`</div>`;
 }
 
-const ACAO_TXT={cadastro:["Cadastro","p-off"],saida:["Saída","p-out"],retorno:["Retorno","p-ok"],teste:["Teste","p-ok"],defeito:["Defeito","p-bad"],reparo:["Em reparo","p-warn"],consertado:["Consertado","p-ok"],descarte:["Descarte","p-off"],edicao:["Edição","p-off"]};
+const ACAO_TXT={uso:["Em uso","p-ok"],guardado:["Guardado","p-store"],foto:["Foto","p-off"],cadastro:["Cadastro","p-off"],saida:["Saída","p-out"],retorno:["Retorno","p-ok"],teste:["Teste","p-ok"],defeito:["Defeito","p-bad"],reparo:["Em reparo","p-warn"],consertado:["Consertado","p-ok"],descarte:["Descarte","p-off"],edicao:["Edição","p-off"]};
 function movLine(m){const a=ACAO_TXT[m.acao]||[m.acao,"p-off"];
   let det=[m.com&&("com "+m.com),m.destino,m.obs].filter(Boolean).map(esc).join(" · ");
   if(m.por){const n=nomeDe(m.por);det+=(det?" · ":"")+`<span class="por">registrado por <b>${esc(n||"…")}</b></span>`}
@@ -523,7 +576,7 @@ $("#btnAdd").addEventListener("click",()=>openAdd());
 
 /* ---------- painel ---------- */
 let openId=null, sub=null, confirmDel=false;
-function closeModal(){$("#modal").innerHTML="";openId=null;sub=null;confirmDel=false}
+function closeModal(){$("#modal").innerHTML="";openId=null;sub=null;confirmDel=false;window.equipFechou&&equipFechou()}
 function modal(html){$("#modal").innerHTML=`<div class="scrim" id="scrim"><div class="panel" role="dialog" aria-modal="true">${html}</div></div>`;
   $("#scrim").addEventListener("click",e=>{if(e.target.id==="scrim")closeModal()})}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modal").innerHTML)closeModal()});
@@ -762,14 +815,189 @@ window.initPatch=function(d){db=d;
 })();
 
 
+
+/* ===== Equipamentos e Instrumentos ===== */
+(function(){
+const CATS={Som:{nome:"Equipamento de som",sigla:"SOM",tipos:["Microfone com fio","Microfone sem fio","Caixa de som (PA)","Retorno de chão","Subwoofer","Mesa de som","Amplificador / potência","Stage box / multicabo","In-ear / fone","Direct box","Pedestal","Interface de áudio","Processador / efeito","Outro"]},
+  Instrumento:{nome:"Instrumento",sigla:"INS",tipos:["Teclado","Violão","Guitarra","Baixo","Bateria","Percussão","Sopro","Amplificador de instrumento","Pedaleira / pedal","Suporte / estante","Outro"]}};
+const SITS=["Em uso","Guardado","Emprestado","Defeito","Em reparo","Descartado"];
+const SIT_CLS={"Em uso":"p-ok","Guardado":"p-store","Emprestado":"p-out","Defeito":"p-bad","Em reparo":"p-warn","Descartado":"p-off"};
+let db=null,itens=[],ready=false,openEq=null,eqSub=null,armDel=false,enviando=false;
+const ui={cat:"",grupo:"",sit:"",q:""};
+const Q=s=>document.querySelector(s);
+const pill=s=>`<span class="pill ${SIT_CLS[s]||"p-off"}">${esc(s)}</span>`;
+const fotoURL=(id,w)=>`https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w||600}`;
+const fotoHTML=(it,w,cls)=>it.foto?`<img class="${cls}" src="${fotoURL(it.foto,w)}" alt="Foto de ${esc(it.nome)}" loading="lazy" referrerpolicy="no-referrer">`:`<span class="${cls} semfoto" aria-hidden="true">${it.categoria==="Instrumento"?"♪":"◉"}</span>`;
+
+function filtrados(){const q=ui.q.trim().toLowerCase();
+  return itens.filter(i=>{
+    if(ui.cat&&i.categoria!==ui.cat)return false;
+    if(ui.grupo&&i.grupo!==ui.grupo)return false;
+    if(ui.sit==="ruim"){if(!(i.situacao==="Defeito"||i.situacao==="Em reparo"))return false}
+    else if(ui.sit){if(i.situacao!==ui.sit)return false}
+    else if(i.situacao==="Descartado")return false;
+    if(q&&![i.codigo,i.nome,i.tipo,i.marca,i.modelo,i.serie,i.local,i.obs,i.saida?.com,i.saida?.destino].join(" ").toLowerCase().includes(q))return false;
+    return true}).sort((a,b)=>a.codigo.localeCompare(b.codigo,"pt-BR",{numeric:true}))}
+
+function renderStats(){const v=itens.filter(i=>i.situacao!=="Descartado");
+  Q("#eq-st-total").textContent=v.length;
+  Q("#eq-st-uso").textContent=v.filter(i=>i.situacao==="Em uso").length;
+  Q("#eq-st-guard").textContent=v.filter(i=>i.situacao==="Guardado").length;
+  Q("#eq-st-emp").textContent=v.filter(i=>i.situacao==="Emprestado").length;
+  Q("#eq-st-ruim").textContent=v.filter(i=>i.situacao==="Defeito"||i.situacao==="Em reparo").length}
+
+function renderList(){const box=Q("#eq-list");
+  if(!ready){box.innerHTML='<div class="empty"><p>Carregando…</p></div>';return}
+  if(!itens.length){box.innerHTML=`<div class="empty"><h2>Nenhum equipamento cadastrado ainda</h2><p>Cadastre caixas, microfones, mesa, retornos e também os instrumentos (teclado, violão, bateria…). Separe em Igreja ou Eventos e tire uma foto de cada um.</p><button class="btn primary" id="eq-add2">+ Cadastrar o primeiro</button></div>`;Q("#eq-add2").onclick=()=>abrirCadastro();Q("#eq-count").textContent="";return}
+  const rows=filtrados();Q("#eq-count").textContent=`${rows.length} de ${itens.length} itens`;
+  if(!rows.length){box.innerHTML='<div class="empty"><p>Nenhum item com esses filtros.</p></div>';return}
+  box.innerHTML='<div class="eqgrid">'+rows.map(i=>`<button class="eqcard" data-eq="${esc(i.id)}">
+    ${fotoHTML(i,300,"eqthumb")}
+    <span class="eqbody"><span class="eqtop"><span class="tag eqtag ${i.grupo==="Eventos"?"ev":""}"><span>${esc(i.codigo)}</span></span>${pill(i.situacao)}</span>
+    <b>${esc(i.nome)}</b>
+    <small>${esc([i.tipo,i.marca,i.modelo].filter(Boolean).join(" · "))}</small>
+    <small class="eqloc">${i.situacao==="Emprestado"&&i.saida?"com "+esc(i.saida.com)+(i.saida.destino?" · "+esc(i.saida.destino):""):esc(i.local||i.grupo)}</small></span></button>`).join("")+'</div>'}
+
+function renderAll(){if(!Q("#pg-equip"))return;renderStats();renderList();if(openEq&&!eqSub)renderDetalhe();window.renderHome&&renderHome()}
+
+/* ---------- cadastro ---------- */
+function proxCodigo(cat,grupo){const pre=(grupo==="Eventos"?"EV-":"")+CATS[cat].sigla+"-";let m=0;
+  itens.forEach(i=>{if(i.codigo.startsWith(pre)){const k=parseInt(i.codigo.slice(pre.length),10);if(k>m)m=k}});return pre+String(m+1).padStart(2,"0")}
+function tiposOpts(cat,sel){return CATS[cat].tipos.map(t=>`<option ${t===sel?"selected":""}>${t}</option>`).join("")}
+function abrirCadastro(){
+  modal(`<header><h2>Cadastrar equipamento</h2><button class="x" aria-label="Fechar" onclick="closeModal()">×</button></header>
+  <form class="form" id="fEq">
+    <label>Categoria<select id="q-cat"><option value="Som">Equipamento de som</option><option value="Instrumento">Instrumento</option></select></label>
+    <label>Tipo<select id="q-tipo">${tiposOpts("Som")}</select></label>
+    <label class="full">Nome<input id="q-nome" required placeholder="Ex.: Caixa ativa JBL EON 715 (lado esquerdo)"></label>
+    <label>Marca<input id="q-marca" placeholder="Ex.: Yamaha"></label>
+    <label>Modelo<input id="q-modelo" placeholder="Ex.: PSR-E473"></label>
+    <label>Nº de série (opcional)<input id="q-serie"></label>
+    <label>Grupo<select id="q-grupo"><option>Igreja</option><option>Eventos</option></select></label>
+    <label>Situação<select id="q-sit"><option>Em uso</option><option>Guardado</option><option>Defeito</option></select></label>
+    <label>Onde fica<input id="q-local" placeholder="Ex.: Palco, armário do som"></label>
+    <label class="full">Observação<input id="q-obs" placeholder="Opcional"></label>
+    <label class="full">Foto (opcional)<input id="q-foto" type="file" accept="image/*"></label>
+    <div class="full sub"><span class="eyebrow">Código que será criado</span><div class="preview" id="q-prev"></div></div>
+    <div class="full actions"><button class="btn primary" id="q-save">Cadastrar</button><button class="btn" type="button" onclick="closeModal()">Cancelar</button></div>
+  </form>`);
+  const upd=()=>{Q("#q-prev").textContent=proxCodigo(Q("#q-cat").value,Q("#q-grupo").value)};
+  Q("#q-cat").addEventListener("change",()=>{Q("#q-tipo").innerHTML=tiposOpts(Q("#q-cat").value);upd()});Q("#q-grupo").addEventListener("change",upd);upd();
+  Q("#fEq").addEventListener("submit",async e=>{e.preventDefault();const b=Q("#q-save");b.disabled=true;b.textContent="Salvando…";
+    const cat=Q("#q-cat").value,grupo=Q("#q-grupo").value,codigo=proxCodigo(cat,grupo),ref=db.collection("equipamentos").doc(),file=Q("#q-foto").files[0];
+    const v=id=>Q("#"+id).value.trim();
+    try{await ref.set({codigo,categoria:cat,tipo:v("q-tipo"),nome:v("q-nome"),marca:v("q-marca"),modelo:v("q-modelo"),serie:v("q-serie"),grupo,situacao:v("q-sit"),local:v("q-local"),obs:v("q-obs"),defeito:"",saida:null,foto:"",criado:new Date().toISOString()});
+      await logMov({codigo,acao:"cadastro",obs:`${v("q-tipo")} · ${v("q-nome")} · ${grupo}`});
+      if(file){b.textContent="Enviando foto…";await enviarFoto(ref.id,file,codigo)}
+      closeModal();toast(`${codigo} cadastrado`)}catch(err){b.disabled=false;b.textContent="Cadastrar";toast(errMsg(err))}})}
+
+/* ---------- foto ---------- */
+async function reduzir(file){const url=URL.createObjectURL(file);
+  try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("Não consegui ler essa imagem."));i.src=url});
+    const k=Math.min(1,1280/Math.max(img.naturalWidth,img.naturalHeight));const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);return c.toDataURL("image/jpeg",0.82).split(",")[1]}finally{URL.revokeObjectURL(url)}}
+async function enviarFoto(id,file,codigo){enviando=true;try{const b64=await reduzir(file);await API("uploadFoto",id,b64);await logMov({codigo,acao:"foto",obs:"Foto adicionada"});await refresh()}finally{enviando=false}}
+
+/* ---------- detalhe ---------- */
+function abrirDetalhe(id){openEq=id;eqSub=null;armDel=false;renderDetalhe()}
+function renderDetalhe(){const i=itens.find(x=>x.id===openEq);if(!i){openEq=null;return}
+  const cs=window.cabosState?window.cabosState():{movs:[]};const hist=cs.movs.filter(m=>m.codigo===i.codigo).slice(0,20);
+  let b="";
+  if(i.situacao==="Em uso")b=`<button class="btn" data-q="guardar">Guardar</button><button class="btn primary" data-q="emprestar">Emprestar</button><button class="btn danger" data-q="defeito">Marcar defeito</button>`;
+  else if(i.situacao==="Guardado")b=`<button class="btn" data-q="usar">Colocar em uso</button><button class="btn primary" data-q="emprestar">Emprestar</button><button class="btn danger" data-q="defeito">Marcar defeito</button>`;
+  else if(i.situacao==="Emprestado")b=`<button class="btn primary" data-q="devolver">Registrar devolução</button>`;
+  else if(i.situacao==="Defeito")b=`<button class="btn" data-q="reparo">Enviar para reparo</button><button class="btn primary" data-q="consertado">Consertado</button><button class="btn danger" data-q="descartar">Descartar</button>`;
+  else if(i.situacao==="Em reparo")b=`<button class="btn primary" data-q="consertado">Voltou do reparo</button><button class="btn danger" data-q="descartar">Descartar</button>`;
+  b+=`<button class="btn" data-q="editar">Editar</button>`;
+  modal(`<header><div style="display:flex;flex-direction:column;gap:6px"><span class="tag eqtag ${i.grupo==="Eventos"?"ev":""} big"><span>${esc(i.codigo)}</span></span><h2>${esc(i.nome)}</h2><span>${pill(i.situacao)}</span></div><button class="x" aria-label="Fechar" onclick="closeModal()">×</button></header>
+  <div class="eqfoto">${fotoHTML(i,1000,"eqbig")}
+    <div class="actions"><label class="btn fotobtn">${i.foto?"Trocar foto":"Adicionar foto"}<input id="eq-file" type="file" accept="image/*" hidden></label>${i.foto?`<a class="btn" href="https://drive.google.com/file/d/${encodeURIComponent(i.foto)}/view" target="_blank" rel="noopener">Ver em tamanho real</a><button class="btn danger" id="eq-rmfoto">Remover foto</button>`:""}</div></div>
+  <dl class="kv">
+    <dt>Categoria</dt><dd>${esc(CATS[i.categoria]?.nome||i.categoria)} · ${esc(i.tipo)}</dd>
+    ${i.marca||i.modelo?`<dt>Marca / modelo</dt><dd>${esc([i.marca,i.modelo].filter(Boolean).join(" "))}</dd>`:""}
+    ${i.serie?`<dt>Nº de série</dt><dd>${esc(i.serie)}</dd>`:""}
+    <dt>Grupo</dt><dd>${esc(i.grupo)}</dd>
+    <dt>Onde fica</dt><dd>${esc(i.local||"—")}</dd>
+    ${i.situacao==="Emprestado"&&i.saida?`<dt>Está com</dt><dd><b>${esc(i.saida.com)}</b>${i.saida.destino?" · "+esc(i.saida.destino):""}<br><small>saiu ${fmtD(i.saida.data)}${i.saida.prev?" · volta prevista "+fmtD(i.saida.prev):""}</small></dd>`:""}
+    ${i.defeito?`<dt>Defeito</dt><dd>${esc(i.defeito)}</dd>`:""}
+    ${i.obs?`<dt>Observação</dt><dd>${esc(i.obs)}</dd>`:""}
+  </dl>
+  <div class="actions" id="eq-acts">${b}</div><div id="eq-sub"></div>
+  <div style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Histórico</span><div class="hist">${hist.length?hist.map(m=>{const l=movLine(m);return `<div><time>${fmtDT(m.data)}</time><span>${l.pill} ${l.det}</span></div>`}).join(""):'<span class="count">Sem registros.</span>'}</div></div>`);
+  Q("#eq-acts").addEventListener("click",e=>{const x=e.target.closest("[data-q]");if(x){eqSub=x.dataset.q;armDel=false;renderSub(i)}});
+  Q("#eq-file").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;const lb=e.target.closest("label");lb.firstChild.textContent="Enviando foto…";eqSub="foto";
+    try{await enviarFoto(i.id,f,i.codigo);toast("Foto salva")}catch(err){toast(err.message&&!err.code?err.message:errMsg(err))}eqSub=null;renderDetalhe()});
+  Q("#eq-rmfoto")?.addEventListener("click",async e=>{if(!e.target.dataset.arm){e.target.dataset.arm=1;e.target.textContent="Toque de novo para remover";return}
+    try{await API("removerFoto",i.id);await logMov({codigo:i.codigo,acao:"foto",obs:"Foto removida"});await refresh();toast("Foto removida")}catch(err){toast(errMsg(err))}});
+  if(eqSub)renderSub(i)}
+
+function renderSub(i){const box=Q("#eq-sub");let h="";
+  const simples=(lbl,ph,btn,cls)=>`<form class="sub form" id="eqf"><label class="full">${lbl}<input id="e-obs" placeholder="${ph}"></label><div class="full actions"><button class="btn ${cls||"primary"}">${btn}</button></div></form>`;
+  if(eqSub==="usar")h=`<form class="sub form" id="eqf"><label class="full">Onde vai ser usado<input id="e-local" value="${esc(i.local||"")}" placeholder="Ex.: Palco principal"></label><div class="full actions"><button class="btn primary">Confirmar</button></div></form>`;
+  if(eqSub==="guardar")h=`<form class="sub form" id="eqf"><label class="full">Onde foi guardado<input id="e-local" value="${esc(i.local||"")}" placeholder="Ex.: Armário do som"></label><div class="full actions"><button class="btn primary">Confirmar</button></div></form>`;
+  if(eqSub==="emprestar")h=`<form class="sub form" id="eqf"><label>Com quem vai ficar<input id="e-com" required placeholder="Nome do responsável"></label><label>Para onde / evento<input id="e-dest" placeholder="Ex.: Retiro de jovens"></label><label>Volta prevista<input id="e-prev" type="date"></label><label>Observação<input id="e-obs"></label><div class="full actions"><button class="btn primary">Confirmar empréstimo</button></div></form>`;
+  if(eqSub==="devolver")h=`<form class="sub form" id="eqf"><label>Como voltou?<select id="e-est"><option value="ok">Funcionando</option><option value="bad">Com defeito</option></select></label><label>Guardado em<input id="e-local" value="${esc(i.local||"")}"></label><label class="full">Observação / defeito<input id="e-obs"></label><div class="full actions"><button class="btn primary">Confirmar devolução</button></div></form>`;
+  if(eqSub==="defeito")h=simples("Qual o problema?","Ex.: não liga, chiado, tecla falhando","Marcar defeito","danger");
+  if(eqSub==="reparo")h=simples("Com quem / onde está o reparo","Ex.: assistência técnica do centro","Confirmar");
+  if(eqSub==="consertado")h=`<form class="sub form" id="eqf"><label>Guardado em<input id="e-local" value="${esc(i.local||"")}"></label><label>Observação<input id="e-obs" placeholder="Ex.: trocada a fonte"></label><div class="full actions"><button class="btn primary">Voltar para guardado</button></div></form>`;
+  if(eqSub==="descartar")h=simples("Motivo","Ex.: sem conserto","Confirmar descarte","danger");
+  if(eqSub==="editar")h=`<form class="sub form" id="eqf">
+    <label>Código<input id="x-cod" value="${esc(i.codigo)}" required></label>
+    <label>Grupo<select id="x-grupo"><option ${i.grupo==="Igreja"?"selected":""}>Igreja</option><option ${i.grupo==="Eventos"?"selected":""}>Eventos</option></select></label>
+    <label>Categoria<select id="x-cat"><option value="Som" ${i.categoria==="Som"?"selected":""}>Equipamento de som</option><option value="Instrumento" ${i.categoria==="Instrumento"?"selected":""}>Instrumento</option></select></label>
+    <label>Tipo<select id="x-tipo">${tiposOpts(i.categoria in CATS?i.categoria:"Som",i.tipo)}</select></label>
+    <label class="full">Nome<input id="x-nome" value="${esc(i.nome)}" required></label>
+    <label>Marca<input id="x-marca" value="${esc(i.marca||"")}"></label><label>Modelo<input id="x-modelo" value="${esc(i.modelo||"")}"></label>
+    <label>Nº de série<input id="x-serie" value="${esc(i.serie||"")}"></label><label>Onde fica<input id="x-local" value="${esc(i.local||"")}"></label>
+    <label class="full">Observação<input id="x-obs" value="${esc(i.obs||"")}"></label>
+    <div class="full actions"><button class="btn primary">Salvar</button><button class="btn danger" type="button" id="x-del">Excluir</button></div></form>`;
+  box.innerHTML=h;const f=Q("#eqf");if(!f)return;const v=id=>(Q("#"+id)?.value||"").trim();
+  Q("#x-cat")?.addEventListener("change",()=>{Q("#x-tipo").innerHTML=tiposOpts(Q("#x-cat").value)});
+  Q("#x-del")?.addEventListener("click",async e=>{if(!armDel){armDel=true;e.target.textContent="Toque de novo para excluir";return}
+    try{await db.doc("equipamentos/"+i.id).delete();await logMov({codigo:i.codigo,acao:"descarte",obs:"Excluído do inventário"});openEq=null;closeModal();toast(`${i.codigo} excluído`)}catch(err){toast(errMsg(err))}});
+  f.addEventListener("submit",async e=>{e.preventDefault();const ref=db.doc("equipamentos/"+i.id);f.querySelectorAll("button").forEach(x=>x.disabled=true);
+    const mov=(acao,extra)=>logMov({codigo:i.codigo,acao,...extra});
+    try{
+      if(eqSub==="usar"){await ref.update({situacao:"Em uso",local:v("e-local")});await mov("uso",{obs:v("e-local")})}
+      if(eqSub==="guardar"){await ref.update({situacao:"Guardado",local:v("e-local")});await mov("guardado",{obs:v("e-local")})}
+      if(eqSub==="emprestar"){const s={com:v("e-com"),destino:v("e-dest"),prev:v("e-prev"),data:today()};await ref.update({situacao:"Emprestado",saida:s});await mov("saida",{com:s.com,destino:s.destino,obs:v("e-obs")})}
+      if(eqSub==="devolver"){const bad=v("e-est")==="bad";await ref.update({situacao:bad?"Defeito":"Guardado",saida:null,local:v("e-local"),defeito:bad?v("e-obs"):""});await mov("retorno",{com:i.saida?.com||"",obs:v("e-obs")});if(bad)await mov("defeito",{obs:v("e-obs")})}
+      if(eqSub==="defeito"){await ref.update({situacao:"Defeito",defeito:v("e-obs")});await mov("defeito",{obs:v("e-obs")})}
+      if(eqSub==="reparo"){await ref.update({situacao:"Em reparo"});await mov("reparo",{obs:v("e-obs")})}
+      if(eqSub==="consertado"){await ref.update({situacao:"Guardado",defeito:"",local:v("e-local")});await mov("consertado",{obs:v("e-obs")})}
+      if(eqSub==="descartar"){await ref.update({situacao:"Descartado"});await mov("descarte",{obs:v("e-obs")})}
+      if(eqSub==="editar"){const cod=v("x-cod").toUpperCase();if(itens.some(x=>x.id!==i.id&&x.codigo===cod)){toast(`Já existe ${cod}`);f.querySelectorAll("button").forEach(x=>x.disabled=false);return}
+        await ref.update({codigo:cod,grupo:v("x-grupo"),categoria:v("x-cat"),tipo:v("x-tipo"),nome:v("x-nome"),marca:v("x-marca"),modelo:v("x-modelo"),serie:v("x-serie"),local:v("x-local"),obs:v("x-obs")});
+        await logMov({codigo:cod,acao:"edicao",obs:cod!==i.codigo?`Código alterado de ${i.codigo}`:"Dados atualizados"})}
+      toast("Salvo");eqSub=null;renderDetalhe();
+    }catch(err){toast(errMsg(err));f.querySelectorAll("button").forEach(x=>x.disabled=false)}})}
+
+/* ---------- filtros ---------- */
+function ligarFiltros(){
+  Q("#eq-q").addEventListener("input",e=>{ui.q=e.target.value;renderList()});
+  Q("#eq-cat").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;ui.cat=b.dataset.v;Q("#eq-cat").querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===b));renderList()});
+  Q("#eq-grp").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;ui.grupo=b.dataset.v;Q("#eq-grp").querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===b));renderList()});
+  Q("#eq-sit").addEventListener("change",e=>{ui.sit=e.target.value;renderList()});
+  Q("#eq-add").addEventListener("click",()=>abrirCadastro());
+  Q("#eq-list").addEventListener("click",e=>{const c=e.target.closest("[data-eq]");if(c)abrirDetalhe(c.dataset.eq)});
+  document.querySelectorAll("#pg-equip .stat").forEach(s=>s.addEventListener("click",()=>{ui.sit=s.dataset.go;Q("#eq-sit").value=ui.sit;renderList()}));
+}
+window.equipState=()=>({itens});
+window.equipAbrirCadastro=()=>abrirCadastro();
+window.equipFechou=()=>{openEq=null;eqSub=null};
+window.initEquip=function(d){db=d;ligarFiltros();renderAll();
+  db.collection("equipamentos").onSnapshot(s=>{itens=s.docs.map(x=>({id:x.id,...x.data()}));ready=true;if(!enviando)renderAll()})};
+})();
+
 (function(){
 const q=s=>document.querySelector(s);
-const PAGES=["home","patch","cabos"];
+const PAGES=["home","patch","cabos","equip"];
 function go(p,sub){if(!PAGES.includes(p))p="home";
   PAGES.forEach(x=>{const el=q("#pg-"+x);el.hidden=x!==p;el.style.display=x===p?"flex":"none"});
   document.querySelectorAll(".nav").forEach(n=>n.setAttribute("aria-current",n.dataset.pg===p?"page":"false"));
   if(p==="patch"&&sub){const t=document.querySelector('#pg-patch .tab[data-tab="'+sub+'"]');t&&t.click()}
   if(p==="cabos"&&sub==="add")openAdd();
+  if(p==="equip"&&sub==="add")window.equipAbrirCadastro();
   try{history.replaceState(null,"",p==="home"?"#":"#"+p)}catch{}
   window.scrollTo({top:0});
 }
@@ -785,6 +1013,8 @@ window.renderHome=function(){
   q("#h-bad").textContent=viv.filter(c=>c.situacao==="Defeito"||c.situacao==="Em reparo").length;
   const fora=viv.filter(c=>c.situacao==="Fora").slice(0,5);
   q("#h-fora").innerHTML=fora.length?'<span class="eyebrow">Fora agora</span>'+fora.map(c=>`<div>${tagHTML(c)} <span>com <b>${esc(c.saida?.com||"—")}</b>${c.saida?.destino?" · "+esc(c.saida.destino):""}</span></div>`).join(""):(viv.length?'<span class="count">Nenhum cabo fora agora.</span>':'<span class="count">Nenhum cabo cadastrado ainda. Comece o levantamento em “Cadastrar cabos”.</span>');
+  const es=window.equipState?window.equipState().itens.filter(i=>i.situacao!=="Descartado"):[];
+  q("#h-eq").textContent=es.length;q("#h-eq-emp").textContent=es.filter(i=>i.situacao==="Emprestado").length;q("#h-eq-bad").textContent=es.filter(i=>i.situacao==="Defeito"||i.situacao==="Em reparo").length;
   const mv=cs.movs.slice(0,6);
   q("#h-mov").innerHTML=mv.length?mv.map(m=>{const l=movLine(m);return `<div><time style="font-family:var(--f-mono);font-size:.8rem;color:var(--muted)">${fmtDT(m.data)}</time> ${l.pill} <b style="font-family:var(--f-mono)">${esc(m.codigo)}</b> <span class="count">${l.det||""}</span></div>`}).join(""):'<span class="count">As saídas, retornos, testes e defeitos registrados no inventário aparecem aqui.</span>';
 };
@@ -793,7 +1023,7 @@ const h=(location.hash||"").replace("#","");go(PAGES.includes(h)?h:"home");rende
   const d=SheetDB;window.MYID=lerNome();mostrarNome();q("#btnNome").addEventListener("click",()=>pedirNome(false));
   if(!window.MYID)pedirNome(true);
   refresh();setInterval(()=>{if(!document.hidden)refresh()},15000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
-  window.initCabos(d);window.initPatch(d);renderHome();
+  window.initCabos(d);window.initPatch(d);window.initEquip(d);renderHome();
 })();
 })();
 </script>
